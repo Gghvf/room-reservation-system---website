@@ -4,43 +4,66 @@
       <h1>Регистрация</h1>
       <form @submit.prevent="handleRegister" class="auth-form">
         <div class="form-group">
-          <label for="name">Имя</label>
+          <label for="login">Логин</label>
           <input
             type="text"
-            id="name"
-            v-model="name"
-            placeholder="Ваше имя"
+            id="login"
+            v-model="login"
+            placeholder="Придумайте логин"
+            required
+          />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="fam">Фамилия</label>
+            <input
+              type="text"
+              id="fam"
+              v-model="fam"
+              placeholder="Иванов"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="ima">Имя</label>
+            <input
+              type="text"
+              id="ima"
+              v-model="ima"
+              placeholder="Иван"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="otch">Отчество</label>
+            <input
+              type="text"
+              id="otch"
+              v-model="otch"
+              placeholder="Иванович"
+              required
+            />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="phone">Номер телефона</label>
+          <input
+            type="tel"
+            id="phone"
+            v-model="phone"
+            placeholder="+7 (999) 000-00-00"
             required
           />
         </div>
         <div class="form-group">
-          <label for="email">Email</label>
+          <label for="kolvo">Количество персон</label>
           <input
-            type="email"
-            id="email"
-            v-model="email"
-            placeholder="your@email.com"
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label for="password">Пароль</label>
-          <input
-            type="password"
-            id="password"
-            v-model="password"
-            placeholder="••••••••"
-            required
-            minlength="6"
-          />
-        </div>
-        <div class="form-group">
-          <label for="confirmPassword">Подтвердите пароль</label>
-          <input
-            type="password"
-            id="confirmPassword"
-            v-model="confirmPassword"
-            placeholder="••••••••"
+            type="number"
+            id="kolvo"
+            v-model.number="kolvo"
+            min="1"
+            max="50"
+            placeholder="1"
             required
           />
         </div>
@@ -59,22 +82,22 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/api';
 
 const router = useRouter();
-const authStore = useAuthStore();
 
-const name = ref('');
-const email = ref('');
-const password = ref('');
-const confirmPassword = ref('');
+const login = ref('');
+const fam = ref('');
+const ima = ref('');
+const otch = ref('');
+const phone = ref('');
+const kolvo = ref(1);
 const loading = ref(false);
 const error = ref('');
 
 const handleRegister = async () => {
-  if (password.value !== confirmPassword.value) {
-    error.value = 'Пароли не совпадают';
+  if (kolvo.value <= 0 || kolvo.value > 50) {
+    error.value = 'Количество персон должно быть от 1 до 50';
     return;
   }
 
@@ -82,20 +105,16 @@ const handleRegister = async () => {
   error.value = '';
 
   try {
-    const response = await authApi.register({
-      email: email.value,
-      password: password.value,
-      name: name.value,
+    await authApi.register({
+      login: login.value,
+      fam: fam.value,
+      ima: ima.value,
+      otch: otch.value,
+      phone: phone.value,
+      kolvo: kolvo.value,
     });
 
-    authStore.setToken(response.token);
-    authStore.setUser(response.user);
-
-    if (response.user.role === 'admin') {
-      router.push('/admin/rooms');
-    } else {
-      router.push('/');
-    }
+    router.push('/');
   } catch (err: unknown) {
     if (err instanceof Error) {
       error.value = err.message || 'Ошибка регистрации';
@@ -123,7 +142,7 @@ const handleRegister = async () => {
   border-radius: 16px;
   padding: 48px;
   width: 100%;
-  max-width: 420px;
+  max-width: 600px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
@@ -138,6 +157,12 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
 }
 
 .form-group {
@@ -211,5 +236,15 @@ h1 {
   border-radius: 8px;
   text-align: center;
   font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .auth-card {
+    padding: 32px 24px;
+  }
 }
 </style>

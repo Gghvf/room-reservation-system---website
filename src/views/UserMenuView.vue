@@ -20,41 +20,28 @@
       <div class="rooms-section">
         <div class="search-filters">
           <div class="filter-group">
-            <label>Дата начала</label>
-            <input type="datetime-local" v-model="searchStart" />
+            <label>Дата бронирования</label>
+            <input type="date" v-model="bookingDate" />
           </div>
-          <div class="filter-group">
-            <label>Дата окончания</label>
-            <input type="datetime-local" v-model="searchEnd" />
-          </div>
-          <div class="filter-group">
-            <label>Минимальная вместимость</label>
-            <input type="number" v-model.number="searchCapacity" min="1" />
-          </div>
-          <button @click="searchRooms" class="btn-search">Найти</button>
+          <button @click="loadAvailableRooms" class="btn-search">Найти доступные</button>
         </div>
 
         <div class="rooms-grid">
-          <div v-for="room in rooms" :key="room.id" class="room-card">
+          <div v-for="room in rooms" :key="room.num" class="room-card">
             <div class="room-header">
-              <h3>{{ room.name }}</h3>
-              <span :class="['status-badge', room.isAvailable ? 'available' : 'busy']">
-                {{ room.isAvailable ? 'Свободна' : 'Занята' }}
+              <h3>Комната #{{ room.num }}</h3>
+              <span :class="['status-badge', room.status === 'свободна' ? 'available' : 'busy']">
+                {{ room.status === 'свободна' ? 'Свободна' : 'Занята' }}
               </span>
             </div>
-            <p class="room-description">{{ room.description }}</p>
             <div class="room-details">
               <span class="detail-item">👥 {{ room.capacity }} чел.</span>
-              <div class="equipment">
-                <span v-for="(item, idx) in room.equipment" :key="idx" class="equipment-tag">
-                  {{ item }}
-                </span>
-              </div>
+              <span v-if="room.booked_by" class="booked-by">Забронировал: {{ room.booked_by }}</span>
             </div>
             <button 
-              @click="bookRoom(room.id)" 
+              @click="bookRoom(room.num)" 
               class="btn-book"
-              :disabled="!room.isAvailable"
+              :disabled="room.status !== 'свободна'"
             >
               Забронировать
             </button>
@@ -70,27 +57,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
-import { roomApi, bookingApi } from '@/api';
-import type { Room } from '@/types';
+import { authApi, roomApi } from '@/api';
+import type { RoomData, UserProfile } from '@/types';
 
 const router = useRouter();
-const authStore = useAuthStore();
 
-const rooms = ref<Room[]>([]);
-const searchStart = ref('');
-const searchEnd = ref('');
-const searchCapacity = ref<number | null>(null);
+const rooms = ref<RoomData[]>([]);
+const bookingDate = ref('');
 const loading = ref(false);
+const user = ref<UserProfile | null>(null);
 
-const userName = computed(() => authStore.user?.name || 'Пользователь');
+const userName = ref('Пользователь');
 
-const loadRooms = async () => {
+const loadUserProfile = async () => {
+  try {
+    user.value = await authApi.getCurrentUser();
+    if (user.value) {
+      userName.value = user.value.fio;
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки профиля:', error);
+  }
+};
+
+const loadAvailableRooms = async () => {
   loading.value = true;
   try {
-    rooms.value = await roomApi.getAllRooms();
+    const login = localStorage.getItem('login');
+    if (login) {
+      rooms.value = await roomApi.getAvailableRooms(login);
+    }
   } catch (error) {
     console.error('Ошибка загрузки комнат:', error);
   } finally {
@@ -98,59 +96,39 @@ const loadRooms = async () => {
   }
 };
 
-const searchRooms = async () => {
-  if (!searchStart.value || !searchEnd.value) {
-    loadRooms();
-    return;
-  }
-
-  loading.value = true;
-  try {
-    rooms.value = await roomApi.searchAvailableRooms(
-      searchStart.value,
-      searchEnd.value,
-      searchCapacity.value || undefined
-    );
-  } catch (error) {
-    console.error('Ошибка поиска комнат:', error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const bookRoom = async (roomId: string) => {
-  if (!searchStart.value || !searchEnd.value) {
-    alert('Пожалуйста, выберите даты бронирования');
+const bookRoom = async (roomNum: number) => {
+  if (!bookingDate.value) {
+    alert('Пожалуйста, выберите дату бронирования');
     return;
   }
 
   try {
-    await bookingApi.createBooking({
-      roomId,
-      startTime: searchStart.value,
-      endTime: searchEnd.value,
-    });
+    const login = localStorage.getItem('login');
+    if (!login) {
+      throw new Error('Необходимо войти в систему');
+    }
+    
+    await roomApi.bookRoom(login, roomNum, bookingDate.value);
     alert('Комната успешно забронирована!');
-    loadRooms();
-  } catch (error) {
+    loadAvailableRooms();
+  } catch (error: unknown) {
     console.error('Ошибка бронирования:', error);
-    alert('Не удалось забронировать комнату');
+    if (error instanceof Error) {
+      alert(error.message || 'Не удалось забронировать комнату');
+    } else {
+      alert('Не удалось забронировать комнату');
+    }
   }
 };
 
-const handleLogout = () => {
-  authStore.logout();
+const handleLogout = async () => {
+  await authApi.logout();
   router.push('/login');
 };
 
 onMounted(() => {
-  loadRooms();
-  
-  const now = new Date();
-  const later = new Date(now.getTime() + 60 * 60 * 1000);
-  
-  searchStart.value = now.toISOString().slice(0, 16);
-  searchEnd.value = later.toISOString().slice(0, 16);
+  loadUserProfile();
+  loadAvailableRooms();
 });
 </script>
 

@@ -17,17 +17,21 @@
         
         <div class="profile-info">
           <div class="info-row">
-            <label>Имя:</label>
-            <span>{{ user?.name }}</span>
+            <label>ФИО:</label>
+            <span>{{ user?.fio }}</span>
           </div>
           <div class="info-row">
-            <label>Email:</label>
-            <span>{{ user?.email }}</span>
+            <label>Телефон:</label>
+            <span>{{ user?.phone }}</span>
+          </div>
+          <div class="info-row">
+            <label>Количество персон:</label>
+            <span>{{ user?.kolvo }}</span>
           </div>
           <div class="info-row">
             <label>Роль:</label>
-            <span :class="['role-badge', user?.role === 'admin' ? 'admin' : 'user']">
-              {{ user?.role === 'admin' ? 'Администратор' : 'Пользователь' }}
+            <span :class="['role-badge', user?.is_admin ? 'admin' : 'user']">
+              {{ user?.is_admin ? 'Администратор' : 'Пользователь' }}
             </span>
           </div>
         </div>
@@ -39,25 +43,18 @@
             У вас пока нет бронирований
           </div>
           <div v-else class="bookings-list">
-            <div v-for="booking in bookings" :key="booking.id" class="booking-card">
+            <div v-for="(booking, index) in bookings" :key="index" class="booking-card">
               <div class="booking-header">
-                <span class="booking-id">#{{ booking.id.slice(0, 8) }}</span>
-                <span :class="['status-badge', getStatusClass(booking.status)]">
-                  {{ getStatusText(booking.status) }}
+                <span class="booking-id">Комната #{{ booking.room_num }}</span>
+                <span class="status-badge confirmed">
+                  Забронировано
                 </span>
               </div>
               <div class="booking-details">
-                <p><strong>Комната:</strong> {{ getRoomName(booking.roomId) }}</p>
-                <p><strong>Начало:</strong> {{ formatDate(booking.startTime) }}</p>
-                <p><strong>Конец:</strong> {{ formatDate(booking.endTime) }}</p>
+                <p><strong>Номер комнаты:</strong> {{ booking.room_num }}</p>
+                <p><strong>Вместимость:</strong> {{ booking.capacity }} чел.</p>
+                <p><strong>Дата бронирования:</strong> {{ booking.date }}</p>
               </div>
-              <button 
-                v-if="booking.status === 'confirmed'"
-                @click="cancelBooking(booking.id)" 
-                class="btn-cancel"
-              >
-                Отменить
-              </button>
             </div>
           </div>
         </div>
@@ -69,22 +66,30 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
-import { bookingApi, roomApi } from '@/api';
-import type { Booking, Room } from '@/types';
+import { authApi, bookingApi } from '@/api';
+import type { Booking, UserProfile } from '@/types';
 
 const router = useRouter();
-const authStore = useAuthStore();
 
-const user = computed(() => authStore.user);
+const user = ref<UserProfile | null>(null);
 const bookings = ref<Booking[]>([]);
-const rooms = ref<Room[]>([]);
 const loading = ref(false);
+
+const loadUserProfile = async () => {
+  try {
+    user.value = await authApi.getCurrentUser();
+  } catch (error) {
+    console.error('Ошибка загрузки профиля:', error);
+  }
+};
 
 const loadBookings = async () => {
   loading.value = true;
   try {
-    bookings.value = await bookingApi.getUserBookings();
+    const login = localStorage.getItem('login');
+    if (login) {
+      bookings.value = await bookingApi.getUserBookings(login);
+    }
   } catch (error) {
     console.error('Ошибка загрузки бронирований:', error);
   } finally {
@@ -92,79 +97,14 @@ const loadBookings = async () => {
   }
 };
 
-const loadRooms = async () => {
-  try {
-    rooms.value = await roomApi.getAllRooms();
-  } catch (error) {
-    console.error('Ошибка загрузки комнат:', error);
-  }
-};
-
-const getRoomName = (roomId: string): string => {
-  const room = rooms.value.find(r => r.id === roomId);
-  return room ? room.name : 'Неизвестно';
-};
-
-const getStatusClass = (status: string): string => {
-  switch (status) {
-    case 'confirmed':
-      return 'confirmed';
-    case 'pending':
-      return 'pending';
-    case 'cancelled':
-      return 'cancelled';
-    default:
-      return '';
-  }
-};
-
-const getStatusText = (status: string): string => {
-  switch (status) {
-    case 'confirmed':
-      return 'Подтверждено';
-    case 'pending':
-      return 'Ожидает';
-    case 'cancelled':
-      return 'Отменено';
-    default:
-      return status;
-  }
-};
-
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const cancelBooking = async (bookingId: string) => {
-  if (!confirm('Вы уверены, что хотите отменить бронирование?')) {
-    return;
-  }
-
-  try {
-    await bookingApi.cancelBooking(bookingId);
-    alert('Бронирование отменено');
-    loadBookings();
-  } catch (error) {
-    console.error('Ошибка отмены бронирования:', error);
-    alert('Не удалось отменить бронирование');
-  }
-};
-
-const handleLogout = () => {
-  authStore.logout();
+const handleLogout = async () => {
+  await authApi.logout();
   router.push('/login');
 };
 
 onMounted(() => {
+  loadUserProfile();
   loadBookings();
-  loadRooms();
 });
 </script>
 

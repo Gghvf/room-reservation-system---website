@@ -7,46 +7,12 @@
     <div class="form-card">
       <form @submit.prevent="handleCreate" class="admin-form">
         <div class="form-group">
-          <label for="name">Имя</label>
+          <label for="login">Логин нового администратора</label>
           <input
             type="text"
-            id="name"
-            v-model="formData.name"
-            placeholder="Введите имя"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            v-model="formData.email"
-            placeholder="admin@example.com"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="password">Пароль</label>
-          <input
-            type="password"
-            id="password"
-            v-model="formData.password"
-            placeholder="••••••••"
-            required
-            minlength="6"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="confirmPassword">Подтвердите пароль</label>
-          <input
-            type="password"
-            id="confirmPassword"
-            v-model="confirmPassword"
-            placeholder="••••••••"
+            id="login"
+            v-model="newAdminLogin"
+            placeholder="Придумайте логин"
             required
           />
         </div>
@@ -78,41 +44,30 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { adminApi } from '@/api';
-import type { CreateAdminRequest } from '@/types';
+import { adminApi, authApi } from '@/api';
 
-const formData = ref<CreateAdminRequest>({
-  name: '',
-  email: '',
-  password: '',
-});
-
-const confirmPassword = ref('');
+const newAdminLogin = ref('');
 const loading = ref(false);
 const error = ref('');
 const success = ref('');
 
 const handleCreate = async () => {
-  if (formData.value.password !== confirmPassword.value) {
-    error.value = 'Пароли не совпадают';
-    return;
-  }
-
   loading.value = true;
   error.value = '';
   success.value = '';
 
   try {
-    await adminApi.createAdmin(formData.value);
+    // Получаем текущий логин администратора
+    const currentLogin = localStorage.getItem('login');
+    if (!currentLogin) {
+      throw new Error('Необходимо войти в систему');
+    }
+
+    await adminApi.createAdmin(currentLogin, newAdminLogin.value);
     success.value = 'Администратор успешно создан!';
     
     // Reset form
-    formData.value = {
-      name: '',
-      email: '',
-      password: '',
-    };
-    confirmPassword.value = '';
+    newAdminLogin.value = '';
   } catch (err: unknown) {
     if (err instanceof Error) {
       error.value = err.message || 'Ошибка создания администратора';

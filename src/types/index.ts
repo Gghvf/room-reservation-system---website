@@ -1,46 +1,62 @@
 export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'user' | 'admin';
+  login: string;
+  fam: string;
+  ima: string;
+  otch: string;
+  phone: string;
+  kolvo: number;
+  isAdmin: boolean;
 }
 
 export interface Room {
-  id: string;
-  name: string;
-  description: string;
+  num: number;
   capacity: number;
-  equipment: string[];
-  isAvailable: boolean;
+  status: string;
+  date: string;
+  booked_by: string;
 }
 
 export interface Booking {
-  id: string;
-  roomId: string;
-  userId: string;
-  startTime: string;
-  endTime: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
+  room_num: number;
+  capacity: number;
+  date: string;
 }
 
 export interface LoginRequest {
-  email: string;
-  password: string;
+  login: string;
 }
 
 export interface RegisterRequest {
-  email: string;
-  password: string;
-  name: string;
+  login: string;
+  fam: string;
+  ima: string;
+  otch: string;
+  phone: string;
+  kolvo: number;
 }
 
 export interface CreateAdminRequest {
-  email: string;
-  password: string;
-  name: string;
+  login: string;
 }
 
 export interface AuthResponse {
-  token: string;
-  user: User;
+  message?: string;
+  error?: string;
+  fio?: string;
+  login?: string;
+}
+
+export interface UserProfile {
+  fio: string;
+  phone: string;
+  kolvo: number;
+  is_admin: boolean;
+}
+
+export interface RoomData {
+  num: number;
+  capacity: number;
+  status: string;
+  date: string;
+  booked_by: string;
 }

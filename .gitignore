@@ -5,36 +5,49 @@ node_modules/
 # Build outputs
 dist/
 build/
-*.tsbuildinfo
+coverage/
 
 # Environment variables
 .env
 .env.local
-*.env.*
+.env.*
 
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
 # Logs
 *.log
 
 # Temporary files
 *.tmp
+*.temp
+*.swp
+*~
 
-# Coverage
-coverage/
-htmlcov/
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE specific
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Testing
 .coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
 
-# Python cache (if any Python files exist in project)
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+# Distribution / packaging
+*.tar.gz
+*.whl
+*.egg-info/
 
-# TypeScript/Vue specific
-.vite/
+# Local configuration
+config.local.*
 ```

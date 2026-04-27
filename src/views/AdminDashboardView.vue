@@ -51,10 +51,10 @@ import { useAuthStore } from '@/stores/auth';
 const router = useRouter();
 const authStore = useAuthStore();
 
-const userName = computed(() => authStore.user?.name || 'Администратор');
+const userName = computed(() => authStore.user?.fio || 'Администратор');
 
-const handleLogout = () => {
-  authStore.logout();
+const handleLogout = async () => {
+  await authStore.logout();
   router.push('/login');
 };
 </script>

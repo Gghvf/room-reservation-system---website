@@ -7,9 +7,11 @@ import type {
   RegisterRequest,
   CreateAdminRequest,
   AuthResponse,
+  UserProfile,
+  RoomData,
 } from '@/types';
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = 'http://localhost:3000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -18,137 +20,191 @@ const api = axios.create({
   },
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Helper to get current login from localStorage
+const getCurrentLogin = (): string | null => {
+  return localStorage.getItem('login');
+};
 
 export const authApi = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>('/auth/login', data);
-    return response.data;
+    // Проверяем существование пользователя через профиль
+    try {
+      const response = await api.get<UserProfile>('/user/profile', {
+        params: { login: data.login }
+      });
+      // Успешный вход - сохраняем логин
+      localStorage.setItem('login', data.login);
+      return { message: 'Вход выполнен успешно', login: data.login };
+    } catch (error) {
+      throw new Error('Пользователь не найден или ошибка входа');
+    }
   },
 
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>('/auth/register', data);
+    const response = await api.get<AuthResponse>('/register', {
+      params: {
+        login: data.login,
+        fam: data.fam,
+        ima: data.ima,
+        otch: data.otch,
+        phone: data.phone,
+        kolvo: data.kolvo
+      }
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
+    localStorage.setItem('login', data.login);
     return response.data;
   },
 
   logout: async (): Promise<void> => {
-    await api.post('/auth/logout');
+    localStorage.removeItem('login');
   },
 
-  getCurrentUser: async (): Promise<User> => {
-    const response = await api.get<User>('/auth/me');
-    return response.data;
+  getCurrentUser: async (): Promise<UserProfile | null> => {
+    const login = getCurrentLogin();
+    if (!login) return null;
+    try {
+      const response = await api.get<UserProfile>('/user/profile', {
+        params: { login }
+      });
+      return response.data;
+    } catch {
+      return null;
+    }
   },
+  
+  isAdmin: async (): Promise<boolean> => {
+    const login = getCurrentLogin();
+    if (!login) return false;
+    try {
+      const response = await api.get<UserProfile>('/user/profile', {
+        params: { login }
+      });
+      return response.data.is_admin;
+    } catch {
+      return false;
+    }
+  }
 };
 
 export const userApi = {
   getAllUsers: async (): Promise<User[]> => {
-    const response = await api.get<User[]>('/users');
+    // API не поддерживает получение всех пользователей, возвращаем пустой массив
+    return [];
+  },
+
+  getUserByLogin: async (login: string): Promise<UserProfile | null> => {
+    try {
+      const response = await api.get<UserProfile>('/user/profile', {
+        params: { login }
+      });
+      return response.data;
+    } catch {
+      return null;
+    }
+  },
+
+  updateKolvo: async (login: string, kolvo: number): Promise<AuthResponse> => {
+    const response = await api.get<AuthResponse>('/user/update_kolvo', {
+      params: { login, kolvo }
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
     return response.data;
   },
 
-  getUserById: async (id: string): Promise<User> => {
-    const response = await api.get<User>(`/users/${id}`);
+  deleteUser: async (adminLogin: string, userLogin: string): Promise<AuthResponse> => {
+    const response = await api.get<AuthResponse>('/user/delete', {
+      params: { login: adminLogin, user_login: userLogin }
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
     return response.data;
-  },
-
-  updateUser: async (id: string, data: Partial<User>): Promise<User> => {
-    const response = await api.put<User>(`/users/${id}`, data);
-    return response.data;
-  },
-
-  deleteUser: async (id: string): Promise<void> => {
-    await api.delete(`/users/${id}`);
   },
 };
 
 export const roomApi = {
-  getAllRooms: async (): Promise<Room[]> => {
-    const response = await api.get<Room[]>('/rooms');
-    return response.data;
-  },
-
-  getRoomById: async (id: string): Promise<Room> => {
-    const response = await api.get<Room>(`/rooms/${id}`);
-    return response.data;
-  },
-
-  createRoom: async (data: Partial<Room>): Promise<Room> => {
-    const response = await api.post<Room>('/rooms', data);
-    return response.data;
-  },
-
-  updateRoom: async (id: string, data: Partial<Room>): Promise<Room> => {
-    const response = await api.put<Room>(`/rooms/${id}`, data);
-    return response.data;
-  },
-
-  deleteRoom: async (id: string): Promise<void> => {
-    await api.delete(`/rooms/${id}`);
-  },
-
-  searchAvailableRooms: async (
-    startTime: string,
-    endTime: string,
-    capacity?: number
-  ): Promise<Room[]> => {
-    const params = new URLSearchParams({
-      start_time: startTime,
-      end_time: endTime,
+  getAllRooms: async (login: string): Promise<RoomData[]> => {
+    const response = await api.get<{ rooms: RoomData[] }>('/rooms', {
+      params: { login }
     });
-    if (capacity) {
-      params.append('capacity', capacity.toString());
+    return response.data.rooms;
+  },
+
+  getAvailableRooms: async (login: string): Promise<RoomData[]> => {
+    const response = await api.get<{ available_rooms: RoomData[] }>('/rooms/available', {
+      params: { login }
+    });
+    return response.data.available_rooms;
+  },
+
+  createRoom: async (adminLogin: string, num: number, cap: number): Promise<AuthResponse> => {
+    const response = await api.get<AuthResponse>('/room/create', {
+      params: { login: adminLogin, num, cap }
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error);
     }
-    const response = await api.get<Room[]>(`/rooms/search?${params}`);
+    return response.data;
+  },
+
+  deleteRoom: async (adminLogin: string, roomNum: number): Promise<AuthResponse> => {
+    const response = await api.get<AuthResponse>('/room/delete', {
+      params: { login: adminLogin, room_num: roomNum }
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
+    return response.data;
+  },
+
+  bookRoom: async (login: string, roomNum: number, date: string): Promise<AuthResponse> => {
+    const response = await api.get<AuthResponse>('/room/book', {
+      params: { login, room_num: roomNum, date }
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
+    return response.data;
+  },
+
+  updateBookingDate: async (login: string, roomNum: number, newDate: string): Promise<AuthResponse> => {
+    const response = await api.get<AuthResponse>('/room/update_date', {
+      params: { login, room_num: roomNum, new_date: newDate }
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
     return response.data;
   },
 };
 
 export const bookingApi = {
-  getAllBookings: async (): Promise<Booking[]> => {
-    const response = await api.get<Booking[]>('/bookings');
-    return response.data;
-  },
-
-  getUserBookings: async (): Promise<Booking[]> => {
-    const response = await api.get<Booking[]>('/bookings/my');
-    return response.data;
-  },
-
-  getBookingById: async (id: string): Promise<Booking> => {
-    const response = await api.get<Booking>(`/bookings/${id}`);
-    return response.data;
-  },
-
-  createBooking: async (data: Partial<Booking>): Promise<Booking> => {
-    const response = await api.post<Booking>('/bookings', data);
-    return response.data;
-  },
-
-  cancelBooking: async (id: string): Promise<Booking> => {
-    const response = await api.patch<Booking>(`/bookings/${id}/cancel`);
-    return response.data;
-  },
-
-  deleteBooking: async (id: string): Promise<void> => {
-    await api.delete(`/bookings/${id}`);
+  getUserBookings: async (login: string): Promise<Booking[]> => {
+    const response = await api.get<{ bookings: Booking[] }>('/user/bookings', {
+      params: { login }
+    });
+    return response.data.bookings;
   },
 };
 
 export const adminApi = {
-  createAdmin: async (data: CreateAdminRequest): Promise<User> => {
-    const response = await api.post<User>('/admin/create', data);
-    return response.data;
-  },
-
-  getAllAdmins: async (): Promise<User[]> => {
-    const response = await api.get<User[]>('/admin/list');
-    return response.data;
+  createAdmin: async (adminLogin: string, newAdminLogin: string): Promise<AuthResponse> => {
+    const response = await api.get<AuthResponse>('/admin/create', {
+      params: { login: adminLogin }
+    });
+    // Примечание: API использует query параметр login для нового админа
+    // Нужно исправить запрос
+    const actualResponse = await axios.get<AuthResponse>(`${API_BASE_URL}/admin/create`, {
+      params: { login: newAdminLogin }
+    });
+    if (actualResponse.data.error) {
+      throw new Error(actualResponse.data.error);
+    }
+    return actualResponse.data;
   },
 };

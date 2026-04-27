@@ -4,22 +4,12 @@
       <h1>Вход</h1>
       <form @submit.prevent="handleLogin" class="auth-form">
         <div class="form-group">
-          <label for="email">Email</label>
+          <label for="login">Логин</label>
           <input
-            type="email"
-            id="email"
-            v-model="email"
-            placeholder="your@email.com"
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label for="password">Пароль</label>
-          <input
-            type="password"
-            id="password"
-            v-model="password"
-            placeholder="••••••••"
+            type="text"
+            id="login"
+            v-model="login"
+            placeholder="Введите ваш логин"
             required
           />
         </div>
@@ -38,14 +28,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/api';
 
 const router = useRouter();
-const authStore = useAuthStore();
 
-const email = ref('');
-const password = ref('');
+const login = ref('');
 const loading = ref(false);
 const error = ref('');
 
@@ -54,15 +41,13 @@ const handleLogin = async () => {
   error.value = '';
 
   try {
-    const response = await authApi.login({
-      email: email.value,
-      password: password.value,
+    await authApi.login({
+      login: login.value,
     });
 
-    authStore.setToken(response.token);
-    authStore.setUser(response.user);
-
-    if (response.user.role === 'admin') {
+    const isAdmin = await authApi.isAdmin();
+    
+    if (isAdmin) {
       router.push('/admin/rooms');
     } else {
       router.push('/');

@@ -1,0 +1,397 @@
+<template>
+  <div class="user-menu">
+    <header class="header">
+      <div class="header-content">
+        <h1>Room Reservation</h1>
+        <nav class="nav">
+          <router-link to="/" class="nav-link active">Главная</router-link>
+          <router-link to="/profile" class="nav-link">Профиль</router-link>
+          <button @click="handleLogout" class="btn-logout">Выйти</button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="welcome-section">
+        <h2>Добро пожаловать, {{ userName }}!</h2>
+        <p>Выберите комнату для бронирования</p>
+      </div>
+
+      <div class="rooms-section">
+        <div class="search-filters">
+          <div class="filter-group">
+            <label>Дата начала</label>
+            <input type="datetime-local" v-model="searchStart" />
+          </div>
+          <div class="filter-group">
+            <label>Дата окончания</label>
+            <input type="datetime-local" v-model="searchEnd" />
+          </div>
+          <div class="filter-group">
+            <label>Минимальная вместимость</label>
+            <input type="number" v-model.number="searchCapacity" min="1" />
+          </div>
+          <button @click="searchRooms" class="btn-search">Найти</button>
+        </div>
+
+        <div class="rooms-grid">
+          <div v-for="room in rooms" :key="room.id" class="room-card">
+            <div class="room-header">
+              <h3>{{ room.name }}</h3>
+              <span :class="['status-badge', room.isAvailable ? 'available' : 'busy']">
+                {{ room.isAvailable ? 'Свободна' : 'Занята' }}
+              </span>
+            </div>
+            <p class="room-description">{{ room.description }}</p>
+            <div class="room-details">
+              <span class="detail-item">👥 {{ room.capacity }} чел.</span>
+              <div class="equipment">
+                <span v-for="(item, idx) in room.equipment" :key="idx" class="equipment-tag">
+                  {{ item }}
+                </span>
+              </div>
+            </div>
+            <button 
+              @click="bookRoom(room.id)" 
+              class="btn-book"
+              :disabled="!room.isAvailable"
+            >
+              Забронировать
+            </button>
+          </div>
+        </div>
+
+        <div v-if="rooms.length === 0" class="no-rooms">
+          <p>Комнаты не найдены</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { roomApi, bookingApi } from '@/api';
+import type { Room } from '@/types';
+
+const router = useRouter();
+const authStore = useAuthStore();
+
+const rooms = ref<Room[]>([]);
+const searchStart = ref('');
+const searchEnd = ref('');
+const searchCapacity = ref<number | null>(null);
+const loading = ref(false);
+
+const userName = computed(() => authStore.user?.name || 'Пользователь');
+
+const loadRooms = async () => {
+  loading.value = true;
+  try {
+    rooms.value = await roomApi.getAllRooms();
+  } catch (error) {
+    console.error('Ошибка загрузки комнат:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const searchRooms = async () => {
+  if (!searchStart.value || !searchEnd.value) {
+    loadRooms();
+    return;
+  }
+
+  loading.value = true;
+  try {
+    rooms.value = await roomApi.searchAvailableRooms(
+      searchStart.value,
+      searchEnd.value,
+      searchCapacity.value || undefined
+    );
+  } catch (error) {
+    console.error('Ошибка поиска комнат:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const bookRoom = async (roomId: string) => {
+  if (!searchStart.value || !searchEnd.value) {
+    alert('Пожалуйста, выберите даты бронирования');
+    return;
+  }
+
+  try {
+    await bookingApi.createBooking({
+      roomId,
+      startTime: searchStart.value,
+      endTime: searchEnd.value,
+    });
+    alert('Комната успешно забронирована!');
+    loadRooms();
+  } catch (error) {
+    console.error('Ошибка бронирования:', error);
+    alert('Не удалось забронировать комнату');
+  }
+};
+
+const handleLogout = () => {
+  authStore.logout();
+  router.push('/login');
+};
+
+onMounted(() => {
+  loadRooms();
+  
+  const now = new Date();
+  const later = new Date(now.getTime() + 60 * 60 * 1000);
+  
+  searchStart.value = now.toISOString().slice(0, 16);
+  searchEnd.value = later.toISOString().slice(0, 16);
+});
+</script>
+
+<style scoped>
+.user-menu {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.nav {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: background 0.3s;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-logout {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-logout:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.welcome-section {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.welcome-section h2 {
+  color: #1a1a2e;
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.welcome-section p {
+  color: #666;
+  font-size: 18px;
+}
+
+.rooms-section {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.search-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid #eee;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: #4a4a68;
+  font-size: 14px;
+}
+
+.filter-group input {
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.btn-search {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-end;
+  transition: transform 0.2s;
+}
+
+.btn-search:hover {
+  transform: translateY(-2px);
+}
+
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.room-card {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.room-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.room-header h3 {
+  margin: 0;
+  color: #1a1a2e;
+  font-size: 20px;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.available {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.busy {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.room-description {
+  color: #666;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.room-details {
+  margin-bottom: 16px;
+}
+
+.detail-item {
+  display: inline-block;
+  background: #e9ecef;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.equipment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.equipment-tag {
+  background: #667eea;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.btn-book {
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-book:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.btn-book:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.no-rooms {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+</style>

@@ -1,53 +1,141 @@
-```
-# Dependencies
-node_modules/
-
-# Build outputs
+```gitignore
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
 dist/
 build/
-coverage/
+target/
 
-# Environment variables
+# Dependencies
+.venv/
+venv/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+*.swo
+*.out
+
+# Environment
 .env
 .env.local
 .env.*
 
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.temp
+# Editors
+.vscode/
+.idea/
 *.swp
-*~
+*.swo
 
 # OS generated files
 .DS_Store
 Thumbs.db
 
-# IDE specific
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
-
-# Testing
-.coverage
+# Coverage
+coverage/
 htmlcov/
+.coverage
+
+# Python specific
+*.py[cod]
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage.*
+.cache/
 .pytest_cache/
 .mypy_cache/
 
-# Distribution / packaging
-*.tar.gz
-*.whl
-*.egg-info/
+# Node.js specific
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+node_modules/
+dist/
+build/
+.nyc_output/
+coverage/
+*.lcov
+.next/
+.nuxt/
+public/dist/
 
-# Local configuration
-config.local.*
+# Java specific
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+target/
+.gradle/
+build/
+
+# C/C++ specific
+*.o
+*.a
+*.so
+*.dll
+*.exe
+*.out
+*.obj
+
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.prof
+vendor/
+
+# Rust specific
+target/
+Cargo.lock
+
+# Ruby specific
+*.gem
+*.rbc
+coverage/
+InstalledFiles
+pkg/
+spec/reports/
+spec/examples.txt
+test/tmp/
+test/version_tmp/
+tmp/
+
+# Compression
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```

@@ -41,11 +41,14 @@ const handleLogin = async () => {
   error.value = '';
 
   try {
-    await authApi.login({
+    const result = await authApi.login({
       login: login.value,
     });
+    
+    console.log('Login successful:', result);
 
     const isAdmin = await authApi.isAdmin();
+    console.log('Is admin:', isAdmin);
     
     if (isAdmin) {
       router.push('/admin/rooms');
@@ -53,6 +56,7 @@ const handleLogin = async () => {
       router.push('/');
     }
   } catch (err: unknown) {
+    console.error('Login error:', err);
     if (err instanceof Error) {
       error.value = err.message || 'Ошибка входа';
     } else {

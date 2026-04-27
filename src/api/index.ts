@@ -32,10 +32,17 @@ export const authApi = {
       const response = await api.get<UserProfile>('/user/profile', {
         params: { login: data.login }
       });
+      // Проверяем, есть ли ошибка в ответе
+      if ('error' in response.data && response.data.error) {
+        throw new Error(response.data.error);
+      }
       // Успешный вход - сохраняем логин
       localStorage.setItem('login', data.login);
       return { message: 'Вход выполнен успешно', login: data.login };
     } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('Пользователь не найден или ошибка входа');
     }
   },

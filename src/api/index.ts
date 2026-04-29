@@ -11,7 +11,7 @@ import type {
   RoomData,
 } from '@/types';
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://127.0.0.1:3000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

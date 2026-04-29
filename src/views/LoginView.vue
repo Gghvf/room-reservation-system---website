@@ -51,16 +51,24 @@ const handleLogin = async () => {
 
     // Получаем данные профиля и обновляем хранилище
     const profile = await authApi.getCurrentUser();
+    console.log('Profile received:', profile);
+
     if (profile) {
       authStore.setLogin(login.value);
       authStore.setUser(profile);
-    }
 
-    // Перенаправляем в зависимости от роли
-    if (profile?.is_admin) {
-      router.push('/admin/rooms');
+      console.log('Is admin?', profile.is_admin);
+
+      // Перенаправляем в зависимости от роли
+      if (profile.is_admin) {
+        console.log('Redirecting to admin panel...');
+        router.push('/admin/rooms');
+      } else {
+        console.log('Redirecting to user menu...');
+        router.push('/');
+      }
     } else {
-      router.push('/');
+      throw new Error('Не удалось получить профиль пользователя');
     }
   } catch (err: unknown) {
     console.error('Login error:', err);

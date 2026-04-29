@@ -29,8 +29,10 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { authApi } from '@/api';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
+const authStore = useAuthStore();
 
 const login = ref('');
 const loading = ref(false);
@@ -44,13 +46,18 @@ const handleLogin = async () => {
     const result = await authApi.login({
       login: login.value,
     });
-    
+
     console.log('Login successful:', result);
 
-    const isAdmin = await authApi.isAdmin();
-    console.log('Is admin:', isAdmin);
-    
-    if (isAdmin) {
+    // Получаем данные профиля и обновляем хранилище
+    const profile = await authApi.getCurrentUser();
+    if (profile) {
+      authStore.setLogin(login.value);
+      authStore.setUser(profile);
+    }
+
+    // Перенаправляем в зависимости от роли
+    if (profile?.is_admin) {
       router.push('/admin/rooms');
     } else {
       router.push('/');

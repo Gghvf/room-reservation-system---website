@@ -66,10 +66,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+
 import { authApi, bookingApi } from '@/api';
+import { useAuthStore } from '@/stores/auth';
 import type { Booking, UserProfile } from '@/types';
 
 const router = useRouter();
+const authStore = useAuthStore();
 
 const user = ref<UserProfile | null>(null);
 const bookings = ref<Booking[]>([]);
@@ -97,8 +100,9 @@ const loadBookings = async () => {
   }
 };
 
-const handleLogout = async () => {
-  await authApi.logout();
+const handleLogout = () => {
+  authStore.logout(); 
+  localStorage.removeItem('userLogin');
   router.push('/login');
 };
 

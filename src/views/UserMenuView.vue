@@ -59,10 +59,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+
 import { authApi, roomApi } from '@/api';
+import { useAuthStore } from '@/stores/auth';
 import type { RoomData, UserProfile } from '@/types';
 
 const router = useRouter();
+const authStore = useAuthStore();
 
 const rooms = ref<RoomData[]>([]);
 const bookingDate = ref('');
@@ -121,8 +124,9 @@ const bookRoom = async (roomNum: number) => {
   }
 };
 
-const handleLogout = async () => {
-  await authApi.logout();
+const handleLogout = () => {
+  authStore.logout(); 
+  localStorage.removeItem('userLogin');
   router.push('/login');
 };
 

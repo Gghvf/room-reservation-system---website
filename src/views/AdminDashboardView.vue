@@ -53,8 +53,9 @@ const authStore = useAuthStore();
 
 const userName = computed(() => authStore.user?.fio || 'Администратор');
 
-const handleLogout = async () => {
-  await authStore.logout();
+const handleLogout = () => {
+  authStore.logout(); 
+  localStorage.removeItem('userLogin');
   router.push('/login');
 };
 </script>

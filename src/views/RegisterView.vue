@@ -83,8 +83,10 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { authApi } from '@/api';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
+const authStore = useAuthStore();
 
 const login = ref('');
 const fam = ref('');
@@ -105,7 +107,7 @@ const handleRegister = async () => {
   error.value = '';
 
   try {
-    await authApi.register({
+    const result = await authApi.register({
       login: login.value,
       fam: fam.value,
       ima: ima.value,
@@ -113,6 +115,13 @@ const handleRegister = async () => {
       phone: phone.value,
       kolvo: kolvo.value,
     });
+
+    // Получаем данные профиля и обновляем хранилище
+    const profile = await authApi.getCurrentUser();
+    if (profile) {
+      authStore.setLogin(login.value);
+      authStore.setUser(profile);
+    }
 
     router.push('/');
   } catch (err: unknown) {
@@ -242,7 +251,7 @@ h1 {
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .auth-card {
     padding: 32px 24px;
   }

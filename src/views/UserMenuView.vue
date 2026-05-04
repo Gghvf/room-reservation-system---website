@@ -30,8 +30,8 @@
           <div v-for="room in rooms" :key="room.num" class="room-card">
             <div class="room-header">
               <h3>Комната #{{ room.num }}</h3>
-              <span :class="['status-badge', room.status === 'свободна' ? 'available' : 'busy']">
-                {{ room.status === 'свободна' ? 'Свободна' : 'Занята' }}
+              <span :class="['status-badge', isRoomAvailable(room.status) ? 'available' : 'busy']">
+                {{ isRoomAvailable(room.status) ? 'Свободна' : 'Занята' }}
               </span>
             </div>
             <div class="room-details">
@@ -41,7 +41,7 @@
             <button 
               @click="bookRoom(room.num)" 
               class="btn-book"
-              :disabled="room.status !== 'свободна'"
+              :disabled="!isRoomAvailable(room.status)"
             >
               Забронировать
             </button>

@@ -150,8 +150,7 @@ const handleRegister = async () => {
   background: white;
   border-radius: 16px;
   padding: 48px;
-  width: 100%;
-  max-width: 600px;
+  width: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 

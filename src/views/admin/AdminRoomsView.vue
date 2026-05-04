@@ -15,35 +15,25 @@
       <table class="rooms-table">
         <thead>
           <tr>
-            <th>Название</th>
-            <th>Описание</th>
+            <th>Номер</th>
             <th>Вместимость</th>
-            <th>Оборудование</th>
             <th>Статус</th>
+            <th>Дата</th>
+            <th>Забронировал</th>
             <th>Действия</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="room in rooms" :key="room.id">
-            <td>{{ room.name }}</td>
-            <td>{{ room.description }}</td>
+          <tr v-for="room in rooms" :key="room.num">
+            <td>{{ room.num }}</td>
             <td>{{ room.capacity }} чел.</td>
-            <td>
-              <div class="equipment-list">
-                <span v-for="(item, idx) in room.equipment" :key="idx" class="equipment-tag">
-                  {{ item }}
-                </span>
-              </div>
-            </td>
-            <td>
-              <span :class="['status-badge', room.isAvailable ? 'available' : 'busy']">
-                {{ room.isAvailable ? 'Свободна' : 'Занята' }}
-              </span>
-            </td>
+            <td>{{ room.status }}</td>
+            <td>{{ room.date }}</td>
+            <td>{{ room.booked_by }}</td>
             <td>
               <div class="actions">
                 <button @click="editRoom(room)" class="btn-edit">✏️</button>
-                <button @click="deleteRoom(room.id)" class="btn-delete">🗑️</button>
+                <button @click="deleteRoom(room.num)" class="btn-delete">🗑️</button>
               </div>
             </td>
           </tr>
@@ -57,26 +47,12 @@
         <h3>{{ isEditing ? 'Редактировать комнату' : 'Новая комната' }}</h3>
         <form @submit.prevent="saveRoom" class="modal-form">
           <div class="form-group">
-            <label>Название</label>
-            <input type="text" v-model="formData.name" required />
-          </div>
-          <div class="form-group">
-            <label>Описание</label>
-            <textarea v-model="formData.description" rows="3"></textarea>
+            <label>Номер комнаты</label>
+            <input type="number" v-model.number="formData.num" min="1" required />
           </div>
           <div class="form-group">
             <label>Вместимость</label>
             <input type="number" v-model.number="formData.capacity" min="1" required />
-          </div>
-          <div class="form-group">
-            <label>Оборудование (через запятую)</label>
-            <input type="text" v-model="equipmentInput" placeholder="Проектор, Доска, WiFi" />
-          </div>
-          <div class="form-group">
-            <label>
-              <input type="checkbox" v-model="formData.isAvailable" />
-              Доступна для бронирования
-            </label>
           </div>
           <div class="modal-actions">
             <button type="button" @click="closeModals" class="btn-cancel">Отмена</button>
@@ -93,29 +69,25 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { roomApi } from '@/api';
-import type { Room } from '@/types';
+import type { RoomData } from '@/types';
 
-const rooms = ref<Room[]>([]);
+const rooms = ref<RoomData[]>([]);
 const loading = ref(false);
 const saving = ref(false);
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const isEditing = ref(false);
 
-const formData = ref<Partial<Room>>({
-  name: '',
-  description: '',
+const formData = ref<Partial<RoomData>>({
+  num: undefined,
   capacity: 1,
-  equipment: [],
-  isAvailable: true,
 });
-
-const equipmentInput = ref('');
 
 const loadRooms = async () => {
   loading.value = true;
   try {
-    rooms.value = await roomApi.getAllRooms();
+    const login = localStorage.getItem('login') || '';
+    rooms.value = await roomApi.getAllRooms(login);
   } catch (error) {
     console.error('Ошибка загрузки комнат:', error);
   } finally {
@@ -132,36 +104,30 @@ const closeModals = () => {
 
 const resetForm = () => {
   formData.value = {
-    name: '',
-    description: '',
+    num: undefined,
     capacity: 1,
-    equipment: [],
-    isAvailable: true,
   };
-  equipmentInput.value = '';
 };
 
-const editRoom = (room: Room) => {
+const editRoom = (room: RoomData) => {
   isEditing.value = true;
   formData.value = { ...room };
-  equipmentInput.value = room.equipment.join(', ');
   showEditModal.value = true;
 };
 
 const saveRoom = async () => {
   saving.value = true;
   
-  // Parse equipment
-  formData.value.equipment = equipmentInput.value
-    .split(',')
-    .map(item => item.trim())
-    .filter(item => item.length > 0);
-
+  const adminLogin = localStorage.getItem('login') || '';
+  
   try {
-    if (isEditing.value && formData.value.id) {
-      await roomApi.updateRoom(formData.value.id, formData.value);
+    if (isEditing.value && formData.value.num) {
+      // Update not supported in API, just reload
+      alert('Редактирование комнат не поддерживается API');
     } else {
-      await roomApi.createRoom(formData.value);
+      const num = formData.value.num || Math.floor(Math.random() * 1000);
+      const cap = formData.value.capacity || 1;
+      await roomApi.createRoom(adminLogin, num, cap);
     }
     
     closeModals();
@@ -174,13 +140,15 @@ const saveRoom = async () => {
   }
 };
 
-const deleteRoom = async (roomId: string) => {
+const deleteRoom = async (roomNum: number) => {
   if (!confirm('Вы уверены, что хотите удалить эту комнату?')) {
     return;
   }
 
+  const adminLogin = localStorage.getItem('login') || '';
+  
   try {
-    await roomApi.deleteRoom(roomId);
+    await roomApi.deleteRoom(adminLogin, roomNum);
     loadRooms();
   } catch (error) {
     console.error('Ошибка удаления комнаты:', error);

@@ -1,4 +1,5 @@
 export interface User {
+  id: string;
   login: string;
   fam: string;
   ima: string;
@@ -6,14 +7,22 @@ export interface User {
   phone: string;
   kolvo: number;
   isAdmin: boolean;
+  name: string;
+  email: string;
+  role: 'user' | 'admin';
 }
 
 export interface Room {
+  id: string;
   num: number;
   capacity: number;
   status: string;
   date: string;
   booked_by: string;
+  name: string;
+  description: string;
+  equipment: string[];
+  isAvailable: boolean;
 }
 
 export interface Booking {

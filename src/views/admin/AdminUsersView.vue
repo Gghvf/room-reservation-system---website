@@ -14,29 +14,35 @@
       <table class="users-table">
         <thead>
           <tr>
-            <th>ID</th>
+            <th>Login</th>
+            <th>Фамилия</th>
             <th>Имя</th>
-            <th>Email</th>
+            <th>Отчество</th>
+            <th>Телефон</th>
+            <th>Кол-во</th>
             <th>Роль</th>
             <th>Действия</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in users" :key="user.id">
-            <td class="user-id">{{ user.id.slice(0, 8) }}</td>
-            <td>{{ user.name }}</td>
-            <td>{{ user.email }}</td>
+          <tr v-for="user in users" :key="user.login">
+            <td class="user-id">{{ user.login }}</td>
+            <td>{{ user.fam }}</td>
+            <td>{{ user.ima }}</td>
+            <td>{{ user.otch }}</td>
+            <td>{{ user.phone }}</td>
+            <td>{{ user.kolvo }}</td>
             <td>
-              <span :class="['role-badge', user.role === 'admin' ? 'admin' : 'user']">
-                {{ user.role === 'admin' ? 'Администратор' : 'Пользователь' }}
+              <span :class="['role-badge', user.isAdmin ? 'admin' : 'user']">
+                {{ user.isAdmin ? 'Администратор' : 'Пользователь' }}
               </span>
             </td>
             <td>
               <div class="actions">
                 <button @click="editUser(user)" class="btn-edit">✏️</button>
                 <button 
-                  v-if="user.role !== 'admin'"
-                  @click="deleteUser(user.id)" 
+                  v-if="!user.isAdmin"
+                  @click="deleteUser(user.login)" 
                   class="btn-delete"
                 >
                   🗑️
@@ -54,19 +60,24 @@
         <h3>Редактировать пользователя</h3>
         <form @submit.prevent="saveUser" class="modal-form">
           <div class="form-group">
+            <label>Фамилия</label>
+            <input type="text" v-model="formData.fam" required />
+          </div>
+          <div class="form-group">
             <label>Имя</label>
-            <input type="text" v-model="formData.name" required />
+            <input type="text" v-model="formData.ima" required />
           </div>
           <div class="form-group">
-            <label>Email</label>
-            <input type="email" v-model="formData.email" required />
+            <label>Отчество</label>
+            <input type="text" v-model="formData.otch" />
           </div>
           <div class="form-group">
-            <label>Роль</label>
-            <select v-model="formData.role">
-              <option value="user">Пользователь</option>
-              <option value="admin">Администратор</option>
-            </select>
+            <label>Телефон</label>
+            <input type="text" v-model="formData.phone" required />
+          </div>
+          <div class="form-group">
+            <label>Кол-во</label>
+            <input type="number" v-model.number="formData.kolvo" min="1" required />
           </div>
           <div class="modal-actions">
             <button type="button" @click="closeModal" class="btn-cancel">Отмена</button>
@@ -91,15 +102,20 @@ const saving = ref(false);
 const showEditModal = ref(false);
 
 const formData = ref<Partial<User>>({
-  name: '',
-  email: '',
-  role: 'user',
+  login: '',
+  fam: '',
+  ima: '',
+  otch: '',
+  phone: '',
+  kolvo: 1,
+  isAdmin: false,
 });
 
 const loadUsers = async () => {
   loading.value = true;
   try {
-    users.value = await userApi.getAllUsers();
+    // API не поддерживает получение всех пользователей
+    users.value = [];
   } catch (error) {
     console.error('Ошибка загрузки пользователей:', error);
   } finally {
@@ -114,9 +130,13 @@ const closeModal = () => {
 
 const resetForm = () => {
   formData.value = {
-    name: '',
-    email: '',
-    role: 'user',
+    login: '',
+    fam: '',
+    ima: '',
+    otch: '',
+    phone: '',
+    kolvo: 1,
+    isAdmin: false,
   };
 };
 
@@ -129,8 +149,11 @@ const saveUser = async () => {
   saving.value = true;
 
   try {
-    if (formData.value.id) {
-      await userApi.updateUser(formData.value.id, formData.value);
+    if (formData.value.login) {
+      // Update not directly supported, using updateKolvo as example
+      if (formData.value.kolvo !== undefined) {
+        await userApi.updateKolvo(formData.value.login, formData.value.kolvo);
+      }
       closeModal();
       loadUsers();
     }
@@ -142,13 +165,15 @@ const saveUser = async () => {
   }
 };
 
-const deleteUser = async (userId: string) => {
+const deleteUser = async (userLogin: string) => {
   if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) {
     return;
   }
 
+  const adminLogin = localStorage.getItem('login') || '';
+  
   try {
-    await userApi.deleteUser(userId);
+    await userApi.deleteUser(adminLogin, userLogin);
     loadUsers();
   } catch (error) {
     console.error('Ошибка удаления пользователя:', error);

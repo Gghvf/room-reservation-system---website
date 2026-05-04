@@ -34,7 +34,7 @@ export const authApi = {
       });
       // Проверяем, есть ли ошибка в ответе
       if ('error' in response.data && response.data.error) {
-        throw new Error(response.data.error);
+        throw new Error(String(response.data.error));
       }
       // Успешный вход - сохраняем логин
       localStorage.setItem('login', data.login);
@@ -202,16 +202,11 @@ export const bookingApi = {
 export const adminApi = {
   createAdmin: async (adminLogin: string, newAdminLogin: string): Promise<AuthResponse> => {
     const response = await api.get<AuthResponse>('/admin/create', {
-      params: { login: adminLogin }
+      params: { login: adminLogin, new_login: newAdminLogin }
     });
-    // Примечание: API использует query параметр login для нового админа
-    // Нужно исправить запрос
-    const actualResponse = await axios.get<AuthResponse>(`${API_BASE_URL}/admin/create`, {
-      params: { login: newAdminLogin }
-    });
-    if (actualResponse.data.error) {
-      throw new Error(actualResponse.data.error);
+    if (response.data.error) {
+      throw new Error(response.data.error);
     }
-    return actualResponse.data;
+    return response.data;
   },
 };

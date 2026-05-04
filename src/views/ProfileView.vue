@@ -14,7 +14,7 @@
     <main class="main-content">
       <div class="profile-card">
         <h2>Личный кабинет</h2>
-        
+
         <div class="profile-info">
           <div class="info-row">
             <label>ФИО:</label>
@@ -55,6 +55,12 @@
                 <p><strong>Вместимость:</strong> {{ booking.capacity }} чел.</p>
                 <p><strong>Дата бронирования:</strong> {{ booking.date }}</p>
               </div>
+              <button
+                @click="cancelBooking(booking.room_num)"
+                class="btn-cancel"
+              >
+                Отменить бронь
+              </button>
             </div>
           </div>
         </div>
@@ -100,8 +106,32 @@ const loadBookings = async () => {
   }
 };
 
+const cancelBooking = async (roomNum: number) => {
+  if (!confirm('Вы уверены, что хотите отменить бронь?')) {
+    return;
+  }
+
+  try {
+    const login = localStorage.getItem('login');
+    if (!login) {
+      throw new Error('Необходимо войти в систему');
+    }
+
+    await bookingApi.cancelBooking(login, roomNum);
+    alert('Бронь успешно отменена!');
+    loadBookings();
+  } catch (error: unknown) {
+    console.error('Ошибка отмены брони:', error);
+    if (error instanceof Error) {
+      alert(error.message || 'Не удалось отменить бронь');
+    } else {
+      alert('Не удалось отменить бронь');
+    }
+  }
+};
+
 const handleLogout = () => {
-  authStore.logout(); 
+  authStore.logout();
   localStorage.removeItem('userLogin');
   router.push('/login');
 };

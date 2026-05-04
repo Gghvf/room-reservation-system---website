@@ -81,7 +81,7 @@ export const authApi = {
       return null;
     }
   },
-  
+
   isAdmin: async (): Promise<boolean> => {
     const login = getCurrentLogin();
     if (!login) return false;
@@ -179,6 +179,16 @@ export const roomApi = {
     return response.data;
   },
 
+  unbookRoom: async (login: string, roomNum: number): Promise<AuthResponse> => {
+    const response = await api.get<AuthResponse>('/room/unbook', {
+      params: { login, room_num: roomNum }
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
+    return response.data;
+  },
+
   updateBookingDate: async (login: string, roomNum: number, newDate: string): Promise<AuthResponse> => {
     const response = await api.get<AuthResponse>('/room/update_date', {
       params: { login, room_num: roomNum, new_date: newDate }
@@ -196,6 +206,16 @@ export const bookingApi = {
       params: { login }
     });
     return response.data.bookings;
+  },
+
+  cancelBooking: async (login: string, roomNum: number): Promise<AuthResponse> => {
+    const response = await api.get<AuthResponse>('/room/unbook', {
+      params: { login, room_num: roomNum }
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
+    return response.data;
   },
 };
 

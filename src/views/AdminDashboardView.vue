@@ -9,17 +9,9 @@
           <span class="icon">🏢</span>
           Комнаты
         </router-link>
-        <router-link to="/admin/users" class="nav-item" active-class="active">
-          <span class="icon">👥</span>
-          Пользователи
-        </router-link>
         <router-link to="/admin/create-admin" class="nav-item" active-class="active">
           <span class="icon">🔐</span>
           Создать админа
-        </router-link>
-        <router-link to="/" class="nav-item">
-          <span class="icon">🏠</span>
-          На главную
         </router-link>
         <button @click="handleLogout" class="nav-item logout-btn">
           <span class="icon">🚪</span>

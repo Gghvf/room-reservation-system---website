@@ -30,18 +30,18 @@
           <div v-for="room in rooms" :key="room.num" class="room-card">
             <div class="room-header">
               <h3>Комната #{{ room.num }}</h3>
-              <span :class="['status-badge', room.status === 'свободна' ? 'available' : 'busy']">
-                {{ room.status === 'свободна' ? 'Свободна' : 'Занята' }}
+              <span :class="['status-badge', isRoomAvailable(room.status) ? 'available' : 'busy']">
+                {{ isRoomAvailable(room.status) ? 'Свободна' : 'Занята' }}
               </span>
             </div>
             <div class="room-details">
               <span class="detail-item">👥 {{ room.capacity }} чел.</span>
               <span v-if="room.booked_by" class="booked-by">Забронировал: {{ room.booked_by }}</span>
             </div>
-            <button 
-              @click="bookRoom(room.num)" 
+            <button
+              @click="bookRoom(room.num)"
               class="btn-book"
-              :disabled="room.status !== 'свободна'"
+              :disabled="!isRoomAvailable(room.status)"
             >
               Забронировать
             </button>
@@ -90,7 +90,9 @@ const loadAvailableRooms = async () => {
   try {
     const login = localStorage.getItem('login');
     if (login) {
-      rooms.value = await roomApi.getAvailableRooms(login);
+      // Получаем все комнаты и фильтруем на стороне клиента
+      const allRooms = await roomApi.getAllRooms(login);
+      rooms.value = allRooms.filter(room => isRoomAvailable(room.status));
     }
   } catch (error) {
     console.error('Ошибка загрузки комнат:', error);
@@ -110,7 +112,7 @@ const bookRoom = async (roomNum: number) => {
     if (!login) {
       throw new Error('Необходимо войти в систему');
     }
-    
+
     await roomApi.bookRoom(login, roomNum, bookingDate.value);
     alert('Комната успешно забронирована!');
     loadAvailableRooms();
@@ -124,8 +126,31 @@ const bookRoom = async (roomNum: number) => {
   }
 };
 
+const isRoomAvailable = (status: string) => {
+  // Комната доступна, если её статус указывает на свободное состояние
+  // API возвращает: "свободна" или "забронирована"
+  const freeStatuses = ['свободна', 'free', 'available'];
+  const busyStatuses = ['занята', 'busy', 'occupied', 'забронирована', 'booked'];
+
+  const lowerStatus = status.toLowerCase();
+
+  // Если статус явно указывает на свободную комнату
+  if (freeStatuses.includes(lowerStatus)) {
+    return true;
+  }
+
+  // Если статус явно указывает на занятую комнату
+  if (busyStatuses.includes(lowerStatus)) {
+    return false;
+  }
+
+  // Если комната не имеет статуса "занята", считаем её доступной
+  // Это покрывает случаи, когда API возвращает пустой статус или другое значение
+  return !busyStatuses.some(busy => lowerStatus.includes(busy));
+};
+
 const handleLogout = () => {
-  authStore.logout(); 
+  authStore.logout();
   localStorage.removeItem('userLogin');
   router.push('/login');
 };
